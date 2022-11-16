@@ -288,7 +288,7 @@ impl Color {
 
 impl Default for Color {
     fn default() -> Self {
-        Self::from(0)
+        Color::BLACK
     }
 }
 
