@@ -142,6 +142,35 @@ impl Color {
         self
     }
 
+    pub fn mix(self, other: Self, t: f64) -> Self {
+        use ColorChannel::*;
+
+        let t = t.clamp(0., 1.);
+
+        let r = self[Red] as f64 * (1. - t) + other[Red] as f64 * t;
+        let g = self[Green] as f64 * (1. - t) + other[Green] as f64 * t;
+        let b = self[Blue] as f64 * (1. - t) + other[Blue] as f64 * t;
+
+        let r = r as u8;
+        let g = g as u8;
+        let b = b as u8;
+
+        Color::rgb(r, g, b)
+    }
+
+    pub fn as_grayscale(self) -> Self {
+        use ColorChannel::*;
+
+        let r = self[Red] as f64 * 0.2124;
+        let g = self[Green] as f64 * 0.7152;
+        let b = self[Blue] as f64 * 0.0722;
+
+        let total = r + g + b;
+        let total = total as u8;
+
+        Color::grayscale(total)
+    }
+
     pub const BLACK: Color = Color::rgb(0, 0, 0);
     pub const SILVER: Color = Color::rgb(192, 192, 192);
     #[doc(alias = "GREY")]
@@ -374,3 +403,8 @@ pub enum ColorChannel {
     Green,
     Blue,
 }
+
+pub struct DrawingPalette(PhantomData<()>);
+
+pub static DRAWING_PALETTE: Mutex<DrawingPalette> =
+    Mutex::new(DrawingPalette(PhantomData));
