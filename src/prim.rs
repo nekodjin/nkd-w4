@@ -95,6 +95,7 @@ impl ops::IndexMut<PaletteColor> for Palette {
 #[derive(Clone, Copy, PartialEq, Eq)]
 pub struct Color(u32);
 
+// TODO: add more color manipulation functions
 impl Color {
     pub const fn rgb(red: u8, green: u8, blue: u8) -> Self {
         let red = red as u32;
@@ -408,3 +409,66 @@ pub struct DrawingPalette(PhantomData<()>);
 
 pub static DRAWING_PALETTE: Mutex<DrawingPalette> =
     Mutex::new(DrawingPalette(PhantomData));
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum DrawingColor {
+    Transparent,
+    Color1,
+    Color2,
+    Color3,
+    Color4,
+}
+
+impl DrawingColor {
+    fn as_int(self) -> u8 {
+        match self {
+            DrawingColor::Transparent => 0,
+            DrawingColor::Color1 => 1,
+            DrawingColor::Color2 => 2,
+            DrawingColor::Color3 => 3,
+            DrawingColor::Color4 => 4,
+        }
+    }
+
+    fn from_int(source: u8) -> Self {
+        match source {
+            0 => Self::Transparent,
+            1 => Self::Color1,
+            2 => Self::Color2,
+            3 => Self::Color3,
+            4 => Self::Color4,
+            _ => unreachable!(),
+        }
+    }
+}
+
+impl DrawingPalette {
+    pub fn get(&self, index: PaletteColor) -> DrawingColor {
+        let idx = index.as_palette_index();
+
+        // DRAW_COLORS can only be accessed by methods on DrawingPalette,
+        // and DrawingPalette can only be obtained from the singular static
+        // mutex. therefore, the aliasing state of self is identical to that
+        // of DRAW_COLORS.
+        let value = unsafe { *w4::DRAW_COLORS } >> (4 * idx);
+        let value = value as u8;
+        let value = value & 0b1111;
+
+        DrawingColor::from_int(value as u8)
+    }
+
+    pub fn set(&mut self, index: PaletteColor, val: DrawingColor) {
+        let idx = index.as_palette_index();
+
+        let value = val.as_int() as u16;
+        let value = value << (4 * idx);
+
+        // DRAW_COLORS can only be accessed by methods on DrawingPalette,
+        // and DrawingPalette can only be obtained from the singular static
+        // mutex. therefore, the aliasing state of self is identical to that
+        // of DRAW_COLORS.
+        unsafe {
+            *w4::DRAW_COLORS = value;
+        }
+    }
+}
