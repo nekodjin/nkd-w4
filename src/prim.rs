@@ -2,6 +2,8 @@ use core::fmt;
 use core::marker::PhantomData;
 use core::mem;
 use core::ops;
+use core::ptr;
+// use core::ptr;
 
 use spin::Mutex;
 
@@ -471,4 +473,132 @@ impl DrawingPalette {
             *w4::DRAW_COLORS = value;
         }
     }
+}
+
+pub struct Gamepad {
+    addr: *const u8,
+}
+
+unsafe impl Send for Gamepad {}
+unsafe impl Sync for Gamepad {}
+
+impl Gamepad {
+    const fn from_index(index: usize) -> Self {
+        Self {
+            addr: (w4::GAMEPADS as *const u8).wrapping_add(index),
+        }
+    }
+}
+
+pub static GAMEPAD_1: Gamepad = Gamepad::from_index(0);
+pub static GAMEPAD_2: Gamepad = Gamepad::from_index(1);
+pub static GAMEPAD_3: Gamepad = Gamepad::from_index(2);
+pub static GAMEPAD_4: Gamepad = Gamepad::from_index(3);
+
+impl Gamepad {
+    pub fn x(&self) -> bool {
+        // TODO: unsafe comment
+        let byte = unsafe { ptr::read_volatile(self.addr) };
+        byte & w4::GAMEPAD_X != 0
+    }
+
+    pub fn z(&self) -> bool {
+        // TODO: unsafe comment
+        let byte = unsafe { ptr::read_volatile(self.addr) };
+        byte & w4::GAMEPAD_Z != 0
+    }
+
+    pub fn left(&self) -> bool {
+        // TODO: unsafe comment
+        let byte = unsafe { ptr::read_volatile(self.addr) };
+        byte & w4::GAMEPAD_LEFT != 0
+    }
+
+    pub fn right(&self) -> bool {
+        // TODO: unsafe comment
+        let byte = unsafe { ptr::read_volatile(self.addr) };
+        byte & w4::GAMEPAD_RIGHT != 0
+    }
+
+    pub fn up(&self) -> bool {
+        // TODO: unsafe comment
+        let byte = unsafe { ptr::read_volatile(self.addr) };
+        byte & w4::GAMEPAD_UP != 0
+    }
+
+    pub fn down(&self) -> bool {
+        // TODO: unsafe comment
+        let byte = unsafe { ptr::read_volatile(self.addr) };
+        byte & w4::GAMEPAD_DOWN != 0
+    }
+}
+
+pub fn mouse_x() -> i16 {
+    // TODO: unsafe comment
+    unsafe { ptr::read_volatile(w4::MOUSE_X) }
+}
+
+pub fn mouse_y() -> i16 {
+    // TODO: unsafe comment
+    unsafe { ptr::read_volatile(w4::MOUSE_Y) }
+}
+
+pub fn mouse_left() -> bool {
+    // TODO: unsafe comment
+    let byte = unsafe { ptr::read_volatile(w4::MOUSE_BUTTONS) };
+    byte & w4::MOUSE_LEFT != 0
+}
+
+pub fn mouse_right() -> bool {
+    // TODO: unsafe comment
+    let byte = unsafe { ptr::read_volatile(w4::MOUSE_BUTTONS) };
+    byte & w4::MOUSE_RIGHT != 0
+}
+
+pub fn mouse_middle() -> bool {
+    // TODO: unsafe comment
+    let byte = unsafe { ptr::read_volatile(w4::MOUSE_BUTTONS) };
+    byte & w4::MOUSE_MIDDLE != 0
+}
+
+pub struct SysFlags(PhantomData<()>);
+
+pub static FLAGS: Mutex<SysFlags> = Mutex::new(SysFlags(PhantomData));
+
+impl SysFlags {
+    pub fn get(&mut self, flag: SysFlag) -> bool {
+        // TODO: unsafe comment
+        let byte = unsafe { ptr::read_volatile(w4::SYSTEM_FLAGS) };
+        let mask = match flag {
+            SysFlag::HideGamepadOverlay => w4::SYSTEM_HIDE_GAMEPAD_OVERLAY,
+            SysFlag::PreserveFramebuffer => {
+                w4::SYSTEM_PRESERVE_FRAMEBUFFER
+            }
+        };
+
+        byte & mask != 0
+    }
+
+    pub fn set(&mut self, flag: SysFlag, val: bool) {
+        // TODO: unsafe comment
+        let byte = unsafe { ptr::read_volatile(w4::SYSTEM_FLAGS) };
+        let mask = match flag {
+            SysFlag::HideGamepadOverlay => w4::SYSTEM_HIDE_GAMEPAD_OVERLAY,
+            SysFlag::PreserveFramebuffer => {
+                w4::SYSTEM_PRESERVE_FRAMEBUFFER
+            }
+        };
+        let mask = if val { mask } else { !mask };
+        let byte = if val { byte | mask } else { byte & mask };
+
+        // TODO: unsafe comment
+        unsafe {
+            ptr::write_volatile(w4::SYSTEM_FLAGS, byte);
+        }
+    }
+}
+
+pub enum SysFlag {
+    HideGamepadOverlay,
+    PreserveFramebuffer,
 }
